@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>回家倒计时 & 进度条</title>
+    <style>
+        /* 基础样式 */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --primary-bg: #f0f0f0;
+            --card-bg: white;
+            --text-color: #333;
+        }
+
+        body {
+            font-family: 'Arial', 'Microsoft YaHei', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: var(--primary-bg);
+            color: var(--text-color);
+            padding: 15px;
+            opacity: 1;
+            transition: opacity 0.3s ease-in-out;
+        }
+
+        /* 主题样式 */
+        .theme-default {
+            --primary-bg: #f0f0f0;
+            --card-bg: white;
+            --text-color: #333;
+            --progress-bg: #e0e0e0;
+            --progress-fill: #4CAF50;
+        }
+
+        .theme-gradient1 {
+            --primary-bg: linear-gradient(135deg, #ff6b6b, #4ecdc4);
+            --card-bg: rgba(255,255,255,0.9);
+            --text-color: #2d3436;
+            --progress-bg: rgba(255,255,255,0.5);
+            --progress-fill: #ff6b6b;
+        }
+
+        .theme-gradient2 {
+            --primary-bg: linear-gradient(135deg, #a8edea, #fed6e3);
+            --card-bg: rgba(255,255,255,0.9);
+            --text-color: #2c3e50;
+            --progress-bg: rgba(255,255,255,0.5);
+            --progress-fill: #a8edea;
+        }
+
+        .theme-dark {
+            --primary-bg: #2c3e50;
+            --card-bg: #34495e;
+            --text-color: #ecf0f1;
+            --progress-bg: #2c3e50;
+            --progress-fill: #3498db;
+        }
+
+        /* 动画效果 */
+        @keyframes slideIn {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+            100% { transform: scale(1); }
+        }
+
+        /* 组件样式 */
+        #countdown {
+            font-size: 1.5rem;
+            text-align: center;
+            padding: 20px;
+            background: var(--card-bg);
+            border-radius: 10px;
+            width: 100%;
+            max-width: 350px;
+            margin: 10px 0;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            animation: slideIn 0.6s ease-out;
+            transition: all 0.3s ease;
+        }
+
+        #progressBar {
+            width: 100%;
+            max-width: 350px;
+            background: var(--card-bg);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 10px 0;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            display: none;
+            animation: slideIn 0.6s ease-out;
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+        }
+
+        .progress-container {
+            width: 100%;
+            height: 20px;
+            background: var(--progress-bg);
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+            margin: 15px 0;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--progress-fill);
+            border-radius: 10px;
+            transition: width 0.5s ease;
+        }
+
+        .progress-text {
+            text-align: center;
+            font-size: 1.1rem;
+            font-weight: bold;
+            margin-top: 10px;
+            animation: pulse 2s infinite;
+        }
+
+        .progress-time {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        #currentTime {
+            font-size: 1rem;
+            background: var(--card-bg);
+            padding: 8px 12px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            text-align: center;
+            width: 100%;
+            max-width: 350px;
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        .settings-btn {
+            position: fixed;
+            left: 15px;
+            top: 15px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            z-index: 250;
+            background: var(--card-bg);
+            padding: 8px;
+            border-radius: 50%;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+
+        .settings-btn:active {
+            transform: scale(0.9);
+        }
+
+        .settings-menu {
+            position: fixed;
+            left: 15px;
+            top: 50px;
+            background: var(--card-bg);
+            border-radius: 8px;
+            padding: 10px;
+            min-width: 120px;
+            display: none;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            z-index: 200;
+            transform-origin: top left;
+            animation: slideIn 0.3s ease-out forwards;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        .settings-menu.active {
+            display: block;
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .menu-item {
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 2px 0;
+            transition: background-color 0.2s;
+        }
+
+        .menu-item:hover {
+            background: rgba(0,0,0,0.05);
+        }
+
+        .settings-panel {
+            position: fixed;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -45%);
+            background: var(--card-bg);
+            padding: 30px 20px 20px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 300px;
+            display: none;
+            z-index: 300;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            opacity: 0;
+            transition: all 0.3s ease-in-out;
+        }
+
+        .settings-panel.active {
+            transform: translate(-50%, -50%);
+            opacity: 1;
+        }
+
+        .back-btn {
+            position: absolute;
+            left: 10px;
+            top: 10px;
+            cursor: pointer;
+            padding: 5px;
+            background: none;
+            border: none;
+            font-size: 1.2em;
+            color: inherit;
+            transition: transform 0.2s;
+        }
+
+        .back-btn:active {
+            transform: scale(0.9);
+        }
+
+        .time-unit {
+            margin: 0 3px;
+            font-weight: bold;
+            display: inline-block;
+            min-width: 45px;
+            transition: color 0.3s;
+        }
+        .days { color: #2196F3; }
+        .hours { color: #4CAF50; }
+        .minutes { color: #FF9800; }
+        .seconds { color: #d32f2f; }
+
+        input[type="datetime-local"] {
+            width: 100%;
+            padding: 8px;
+            margin: 10px 0;
+            font-size: 0.9rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            transition: border-color 0.3s;
+        }
+
+        input[type="datetime-local"]:focus {
+            border-color: #4CAF50;
+            outline: none;
+        }
+
+        .theme-options {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        .theme-option {
+            padding: 10px;
+            border-radius: 6px;
+            border: 2px solid transparent;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .theme-option.active {
+            border-color: #4CAF50;
+            transform: scale(0.98);
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.3);
+            display: none;
+            z-index: 150;
+            transition: opacity 0.3s;
+            opacity: 0;
+        }
+
+        .overlay.active {
+            display: block;
+            opacity: 1;
+        }
+
+        .back-home {
+            position: fixed;
+            right: 20px;
+            top: 20px;
+            z-index: 350;
+            padding: 10px;
+            background: var(--card-bg);
+            border-radius: 50%;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            text-decoration: none;
+            color: inherit;
+            transition: transform 0.2s;
+        }
+
+        .back-home:active {
+            transform: scale(0.9);
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+            margin-top: 5px;
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        .mode-toggle {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            padding: 8px;
+            background: rgba(0,0,0,0.05);
+            border-radius: 6px;
+        }
+
+        .mode-btn {
+            flex: 1;
+            padding: 8px;
+            text-align: center;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .mode-btn.active {
+            background: #4CAF50;
+            color: white;
+        }
+
+        h3 {
+            text-align: center;
+            margin: 0 0 15px 0;
+            padding-top: 10px;
+        }
+
+        .precision-info {
+            font-size: 0.8rem;
+            color: #666;
+            text-align: center;
+            margin-top: 10px;
+        }
+
+        @media (max-width: 430px) {
+            #countdown {
+                font-size: 1.2rem;
+                padding: 15px;
+            }
+            
+            .settings-menu {
+                left: 10px;
+                top: 45px;
+            }
+            
+            .back-btn {
+                left: 8px;
+                top: 8px;
+            }
+            
+            .progress-text {
+                font-size: 0.95rem;
+            }
+        }
+    </style>
+</head>
+<body class="theme-default">
+    <a href="index.html" class="back-home">🏠</a>
+    <div class="overlay" id="overlay"></div>
+    <div id="currentTime"></div>
+    
+    <div class="settings-btn" id="settingsBtn">⚙️</div>
+    
+    <div class="settings-menu" id="mainMenu">
+        <div class="menu-item" data-panel="date">📅 设置日期</div>
+        <div class="menu-item" data-panel="theme">🎨 设置主题</div>
+        <div class="menu-item" id="toggleProgress">📊 进度条模式</div>
+    </div>
+
+    <div class="settings-panel" id="datePanel">
+        <button class="back-btn">←</button>
+        <div class="mode-toggle">
+            <div class="mode-btn active" id="modeCountdown">倒计时</div>
+            <div class="mode-btn" id="modeProgress">进度条</div>
+        </div>
+        
+        <div id="countdownSettings">
+            <h3>设置回家时间</h3>
+            <input type="datetime-local" id="targetDate" step="1">
+            <button id="saveDate">保存时间</button>
+        </div>
+        
+        <div id="progressSettings" style="display:none;">
+            <h3>设置进度时间</h3>
+            <label>开始日期:</label>
+            <input type="datetime-local" id="startDate" step="1">
+            <label>结束日期:</label>
+            <input type="datetime-local" id="endDate" step="1">
+            <button id="saveProgress">保存设置</button>
+            <div class="precision-info">进度条将显示小数点后4位</div>
+        </div>
+    </div>
+
+    <div class="settings-panel" id="themePanel">
+        <button class="back-btn">←</button>
+        <h3>选择主题</h3>
+        <div class="theme-options">
+            <div class="theme-option theme-default">默认</div>
+            <div class="theme-option theme-gradient1">海洋</div>
+            <div class="theme-option theme-gradient2">柔光</div>
+            <div class="theme-option theme-dark">暗黑</div>
+        </div>
+        <button id="saveTheme">应用主题</button>
+    </div>
+
+    <div id="countdown"></div>
+    
+    <div id="progressBar">
+        <div class="progress-header">
+            <span>开始: <span id="startDateDisplay"></span></span>
+            <span>结束: <span id="endDateDisplay"></span></span>
+        </div>
+        <div class="progress-container">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <div class="progress-text" id="progressPercentage">0.0000%</div>
+        <div class="progress-time">
+            <span>已过: <span id="elapsedTime">0天</span></span>
+            <span>剩余: <span id="remainingTime">0天</span></span>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            var timer = null;
+            var timeUpdater = null;
+            var progressUpdater = null;
+            var selectedTheme = '';
+            var isMenuOpen = false;
+            var currentMode = 'countdown'; // 'countdown' 或 'progress'
+
+            function formatDateTime(date) {
+                var pad = function(n) { return n < 10 ? '0' + n : n; };
+                return date.getFullYear() + '-' +
+                    pad(date.getMonth() + 1) + '-' +
+                    pad(date.getDate()) + 'T' +
+                    pad(date.getHours()) + ':' +
+                    pad(date.getMinutes()) + ':' +
+                    pad(date.getSeconds());
+            }
+
+            function formatDateDisplay(date) {
+                return date.getFullYear() + '-' +
+                    (date.getMonth() + 1) + '-' +
+                    date.getDate() + ' ' +
+                    date.getHours() + ':' +
+                    (date.getMinutes() < 10 ? '0' : '') + date.getMinutes();
+            }
+
+            function updateCurrentTime() {
+                var now = new Date();
+                document.getElementById('currentTime').innerHTML = 
+                    now.toLocaleDateString() + ' ' +
+                    now.toLocaleTimeString('zh-CN', { hour12: false });
+            }
+
+            function toggleMainMenu() {
+                isMenuOpen = !isMenuOpen;
+                var menu = document.getElementById('mainMenu');
+                var overlay = document.getElementById('overlay');
+                
+                if(isMenuOpen) {
+                    menu.style.display = 'block';
+                    overlay.style.display = 'block';
+                    setTimeout(function() {
+                        menu.classList.add('active');
+                        overlay.classList.add('active');
+                    }, 10);
+                } else {
+                    menu.classList.remove('active');
+                    overlay.classList.remove('active');
+                    setTimeout(function() {
+                        menu.style.display = 'none';
+                        overlay.style.display = 'none';
+                    }, 300);
+                }
+            }
+
+            function showPanel(type) {
+                var panel = document.getElementById(type + 'Panel');
+                panel.style.display = 'block';
+                setTimeout(function() {
+                    panel.classList.add('active');
+                }, 10);
+            }
+
+            function backToMenu() {
+                var panels = document.querySelectorAll('.settings-panel');
+                panels.forEach(function(panel) {
+                    panel.classList.remove('active');
+                    setTimeout(function() {
+                        panel.style.display = 'none';
+                    }, 300);
+                });
+                document.getElementById('overlay').classList.remove('active');
+                isMenuOpen = false;
+            }
+
+            function selectTheme(theme) {
+                selectedTheme = theme;
+                var options = document.querySelectorAll('.theme-option');
+                options.forEach(function(opt) {
+                    opt.classList.remove('active');
+                });
+                event.target.classList.add('active');
+            }
+
+            function saveDate() {
+                var targetDate = document.getElementById('targetDate').value;
+                if (!targetDate) {
+                    alert('请选择目标日期和时间');
+                    return;
+                }
+                localStorage.setItem('homeDate', targetDate);
+                backToMenu();
+                startCountdown();
+            }
+
+            function saveProgressSettings() {
+                var startDate = document.getElementById('startDate').value;
+                var endDate = document.getElementById('endDate').value;
+                
+                if (!startDate || !endDate) {
+                    alert('请填写开始日期和结束日期');
+                    return;
+                }
+                
+                if (new Date(startDate) >= new Date(endDate)) {
+                    alert('结束日期必须在开始日期之后');
+                    return;
+                }
+                
+                localStorage.setItem('progressStartDate', startDate);
+                localStorage.setItem('progressEndDate', endDate);
+                backToMenu();
+                startProgressBar();
+            }
+
+            function saveTheme() {
+                if (!selectedTheme) return;
+                localStorage.setItem('selectedTheme', selectedTheme);
+                document.body.className = selectedTheme;
+                backToMenu();
+            }
+
+            function startCountdown() {
+                if (timer) clearInterval(timer);
+                
+                var target = new Date(localStorage.getItem('homeDate'));
+                var countdownElement = document.getElementById('countdown');
+                
+                if (!target.getTime()) {
+                    countdownElement.innerHTML = "请设置回家时间";
+                    return;
+                }
+
+                function update() {
+                    var now = new Date();
+                    var diff = target - now;
+
+                    if (diff <= 0) {
+                        countdownElement.innerHTML = "回家啦！🎉";
+                        clearInterval(timer);
+                        return;
+                    }
+
+                    var days = Math.floor(diff / 86400000);
+                    var hours = Math.floor((diff % 86400000) / 3600000);
+                    var minutes = Math.floor((diff % 3600000) / 60000);
+                    var seconds = Math.floor((diff % 60000) / 1000);
+
+                    countdownElement.innerHTML = 
+                        '回家还有<br>' +
+                        '<span class="time-unit days">' + days + '天</span>' +
+                        '<span class="time-unit hours">' + hours + '时</span><br>' +
+                        '<span class="time-unit minutes">' + minutes + '分</span>' +
+                        '<span class="time-unit seconds">' + seconds + '秒</span>';
+                }
+
+                update();
+                timer = setInterval(update, 1000);
+            }
+
+            function startProgressBar() {
+                if (progressUpdater) clearInterval(progressUpdater);
+                
+                var start = new Date(localStorage.getItem('progressStartDate'));
+                var end = new Date(localStorage.getItem('progressEndDate'));
+                
+                if (!start.getTime() || !end.getTime()) {
+                    document.getElementById('progressPercentage').innerHTML = "请设置时间范围";
+                    return;
+                }
+                
+                document.getElementById('startDateDisplay').innerHTML = formatDateDisplay(start);
+                document.getElementById('endDateDisplay').innerHTML = formatDateDisplay(end);
+
+                function updateProgress() {
+                    var now = new Date();
+                    var total = end - start;
+                    var elapsed = now - start;
+                    
+                    if (elapsed < 0) {
+                        // 还没开始
+                        document.getElementById('progressFill').style.width = '0%';
+                        document.getElementById('progressPercentage').innerHTML = '0.0000%';
+                        document.getElementById('elapsedTime').innerHTML = '0天';
+                        document.getElementById('remainingTime').innerHTML = 
+                            Math.ceil((end - now) / 86400000) + '天';
+                        return;
+                    }
+                    
+                    if (elapsed >= total) {
+                        // 已经结束
+                        document.getElementById('progressFill').style.width = '100%';
+                        document.getElementById('progressPercentage').innerHTML = '100.0000%';
+                        document.getElementById('elapsedTime').innerHTML = 
+                            Math.floor(total / 86400000) + '天';
+                        document.getElementById('remainingTime').innerHTML = '0天';
+                        return;
+                    }
+                    
+                    var percentage = (elapsed / total * 100);
+                    var elapsedDays = (elapsed / 86400000).toFixed(4);
+                    var remainingDays = ((end - now) / 86400000).toFixed(4);
+                    
+                    document.getElementById('progressFill').style.width = percentage + '%';
+                    document.getElementById('progressPercentage').innerHTML = percentage.toFixed(4) + '%';
+                    document.getElementById('elapsedTime').innerHTML = elapsedDays + '天';
+                    document.getElementById('remainingTime').innerHTML = remainingDays + '天';
+                }
+                
+                updateProgress();
+                progressUpdater = setInterval(updateProgress, 100);
+            }
+
+            function toggleProgressMode() {
+                currentMode = currentMode === 'countdown' ? 'progress' : 'countdown';
+                localStorage.setItem('currentMode', currentMode);
+                
+                if (currentMode === 'countdown') {
+                    document.getElementById('countdown').style.display = 'block';
+                    document.getElementById('progressBar').style.display = 'none';
+                    document.getElementById('toggleProgress').innerHTML = '📊 进度条模式';
+                    startCountdown();
+                } else {
+                    document.getElementById('countdown').style.display = 'none';
+                    document.getElementById('progressBar').style.display = 'block';
+                    document.getElementById('toggleProgress').innerHTML = '⏱️ 倒计时模式';
+                    startProgressBar();
+                }
+            }
+
+            function switchSettingsMode(mode) {
+                if (mode === 'countdown') {
+                    document.getElementById('countdownSettings').style.display = 'block';
+                    document.getElementById('progressSettings').style.display = 'none';
+                    document.getElementById('modeCountdown').classList.add('active');
+                    document.getElementById('modeProgress').classList.remove('active');
+                } else {
+                    document.getElementById('countdownSettings').style.display = 'none';
+                    document.getElementById('progressSettings').style.display = 'block';
+                    document.getElementById('modeCountdown').classList.remove('active');
+                    document.getElementById('modeProgress').classList.add('active');
+                }
+            }
+
+            window.onload = function() {
+                var savedTheme = localStorage.getItem('selectedTheme') || 'theme-default';
+                document.body.className = savedTheme;
+                
+                var themeElement = document.querySelector('.theme-option.' + savedTheme);
+                if (themeElement) {
+                    themeElement.classList.add('active');
+                }
+
+                updateCurrentTime();
+                timeUpdater = setInterval(updateCurrentTime, 1000);
+
+                // 加载倒计时设置
+                var savedDate = localStorage.getItem('homeDate');
+                if (savedDate) {
+                    document.getElementById('targetDate').value = savedDate;
+                }
+                
+                // 加载进度条设置
+                var savedStartDate = localStorage.getItem('progressStartDate');
+                var savedEndDate = localStorage.getItem('progressEndDate');
+                if (savedStartDate) {
+                    document.getElementById('startDate').value = savedStartDate;
+                }
+                if (savedEndDate) {
+                    document.getElementById('endDate').value = savedEndDate;
+                }
+                
+                // 加载当前模式
+                currentMode = localStorage.getItem('currentMode') || 'countdown';
+                if (currentMode === 'progress') {
+                    document.getElementById('countdown').style.display = 'none';
+                    document.getElementById('progressBar').style.display = 'block';
+                    document.getElementById('toggleProgress').innerHTML = '⏱️ 倒计时模式';
+                    startProgressBar();
+                } else {
+                    document.getElementById('countdown').style.display = 'block';
+                    document.getElementById('progressBar').style.display = 'none';
+                    document.getElementById('toggleProgress').innerHTML = '📊 进度条模式';
+                    startCountdown();
+                }
+
+                // 事件绑定
+                document.getElementById('settingsBtn').addEventListener('click', toggleMainMenu);
+                document.getElementById('saveDate').addEventListener('click', saveDate);
+                document.getElementById('saveProgress').addEventListener('click', saveProgressSettings);
+                document.getElementById('saveTheme').addEventListener('click', saveTheme);
+                document.getElementById('toggleProgress').addEventListener('click', toggleProgressMode);
+                
+                document.querySelectorAll('.back-btn').forEach(function(btn) {
+                    btn.addEventListener('click', backToMenu);
+                });
+
+                document.querySelectorAll('.menu-item').forEach(function(item) {
+                    if (item.id !== 'toggleProgress') {
+                        item.addEventListener('click', function() {
+                            showPanel(this.dataset.panel);
+                        });
+                    }
+                });
+
+                document.querySelectorAll('.theme-option').forEach(function(opt) {
+                    opt.addEventListener('click', function() {
+                        selectTheme(this.className.split(' ')[1]);
+                    });
+                });
+
+                document.getElementById('overlay').addEventListener('click', function(event) {
+                    event.stopPropagation();
+                    toggleMainMenu();
+                });
+                
+                document.getElementById('modeCountdown').addEventListener('click', function() {
+                    switchSettingsMode('countdown');
+                });
+                
+                document.getElementById('modeProgress').addEventListener('click', function() {
+                    switchSettingsMode('progress');
+                });
+
+                if (localStorage.getItem('homeDate')) {
+                    var date = new Date(localStorage.getItem('homeDate'));
+                    document.getElementById('targetDate').value = formatDateTime(date);
+                }
+            };
+
+            window.onunload = function() {
+                clearInterval(timer);
+                clearInterval(timeUpdater);
+                clearInterval(progressUpdater);
+            };
+        })();
+    </script>
+</body>
+</html>

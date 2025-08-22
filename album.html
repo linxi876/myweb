@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>我的相册</title>
+    <style>
+        /* 原有CSS样式保持不变 */
+        :root {
+            --primary-color: #2196F3;
+            --card-bg: rgba(255,255,255,0.9);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes zoomIn {
+            from { transform: scale(0.95); }
+            to { transform: scale(1); }
+        }
+
+        body {
+            font-family: Arial;
+            min-height: 100vh;
+            background: #f0f0f0;
+            margin: 0;
+            padding: 5px;
+            transition: opacity 0.3s;
+        }
+
+        .back-btn {
+            position: fixed;
+            left: 10px;
+            top: 10px;
+            padding: 8px;
+            background: var(--card-bg);
+            border-radius: 50%;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            cursor: pointer;
+            z-index: 100;
+            transition: transform 0.2s;
+            font-size: 14px;
+        }
+
+        .back-btn:active {
+            transform: scale(0.9);
+        }
+
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            padding: 8px;
+            margin-top: 40px;
+        }
+
+        .media-item {
+            position: relative;
+            border-radius: 6px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            cursor: pointer;
+            animation: zoomIn 0.3s ease-out;
+            transition: transform 0.2s;
+            background: #eee;
+            aspect-ratio: 1;
+            max-width: 100%;
+        }
+
+        .media-item:active {
+            transform: scale(0.98);
+        }
+
+        .media-item img,
+        .media-item video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            vertical-align: bottom;
+        }
+
+        .media-item video {
+            object-fit: contain;
+            background: #000;
+        }
+
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+            animation: fadeIn 0.3s;
+        }
+
+        .modal-content {
+            max-width: 95%;
+            max-height: 95%;
+            border-radius: 6px;
+            overflow: hidden;
+            background: #000;
+        }
+
+        #uploadBtn {
+            position: fixed;
+            right: 10px;
+            bottom: 10px;
+            padding: 12px 20px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            cursor: pointer;
+            z-index: 100;
+            transition: transform 0.2s;
+            font-size: 14px;
+        }
+
+        .loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            display: none;
+            z-index: 300;
+            font-size: 16px;
+            background: rgba(0,0,0,0.7);
+            padding: 10px 20px;
+            border-radius: 20px;
+        }
+
+        .fullscreen-btn {
+            position: absolute;
+            right: 5px;
+            bottom: 5px;
+            background: rgba(0,0,0,0.5);
+            color: white;
+            border: none;
+            padding: 3px 8px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <a href="index.html" class="back-home">🏠</a>
+    <div class="gallery" id="gallery"></div>
+    <div class="modal" id="modal">
+        <div class="modal-content" id="modalContent"></div>
+    </div>
+    <div class="loading" id="loading">上传中...</div>
+    <button id="uploadBtn">上传</button>
+
+    <script>
+        // 修复上传问题的新版本
+        const gallery = document.getElementById('gallery');
+        const modal = document.getElementById('modal');
+        const modalContent = document.getElementById('modalContent');
+        const loading = document.getElementById('loading');
+
+        // 加载本地存储的媒体
+        function loadMedia() {
+            const media = JSON.parse(localStorage.getItem('media') || '[]');
+            gallery.innerHTML = '';
+            media.forEach(item => createMediaElement(item));
+        }
+
+        // 创建媒体元素
+        function createMediaElement(data) {
+            const container = document.createElement('div');
+            container.className = 'media-item';
+            
+            const media = data.type === 'video' ? 
+                document.createElement('video') :
+                document.createElement('img');
+            
+            media.src = data.url;
+            if(data.type === 'video') {
+                media.controls = true;
+                media.preload = 'metadata';
+                
+                // 添加全屏按钮
+                const fullscreenBtn = document.createElement('button');
+                fullscreenBtn.className = 'fullscreen-btn';
+                fullscreenBtn.innerHTML = '全屏';
+                fullscreenBtn.onclick = () => media.requestFullscreen();
+                container.appendChild(fullscreenBtn);
+            }
+            
+            container.appendChild(media);
+            container.addEventListener('click', () => showModal(data.url, data.type));
+            gallery.appendChild(container);
+        }
+
+        // 显示大图/视频
+        function showModal(url, type) {
+            modal.style.display = 'flex';
+            if(type === 'video') {
+                modalContent.innerHTML = `
+                    <video controls autoplay style="max-height:80vh">
+                        <source src="${url}" type="video/mp4">
+                        您的浏览器不支持视频播放
+                    </video>
+                `;
+            } else {
+                modalContent.innerHTML = `<img src="${url}" style="max-height:80vh">`;
+            }
+        }
+
+        // 关闭模态框
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.style.display = 'none';
+                modalContent.innerHTML = '';
+            }
+        });
+
+        // 修复后的上传功能
+        document.getElementById('uploadBtn').addEventListener('click', () => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.multiple = true;
+            // 修复文件类型过滤问题
+            input.accept = 'image/*, video/*';
+            
+            input.onchange = async e => {
+                const files = Array.from(e.target.files);
+                if (files.length === 0) return;
+                
+                loading.style.display = 'block';
+                
+                for(const file of files) {
+                    try {
+                        // 基本的文件类型验证
+                        if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
+                            alert(`不支持的文件类型: ${file.type}`);
+                            continue;
+                        }
+
+                        // 文件大小限制为10MB（适合小内存设备）
+                        if(file.size > 10 * 1024 * 1024) {
+                            alert('文件太大 (最大10MB)');
+                            continue;
+                        }
+
+                        const reader = new FileReader();
+                        
+                        const result = await new Promise((resolve) => {
+                            reader.onload = () => resolve(reader.result);
+                            reader.onerror = (error) => {
+                                console.error('文件读取错误:', error);
+                                resolve(null);
+                            };
+                            reader.readAsDataURL(file);
+                        });
+
+                        if (!result) {
+                            alert(`无法读取文件: ${file.name}`);
+                            continue;
+                        }
+
+                        const mediaData = {
+                            url: result,
+                            type: file.type.startsWith('video') ? 'video' : 'image',
+                            date: new Date().toISOString()
+                        };
+                        
+                        // 保存到本地存储
+                        const existing = JSON.parse(localStorage.getItem('media') || '[]');
+                        existing.push(mediaData);
+                        localStorage.setItem('media', JSON.stringify(existing));
+                        
+                        // 创建元素
+                        createMediaElement(mediaData);
+
+                    } catch (error) {
+                        console.error('上传失败:', error);
+                        alert(`上传失败: ${file.name}`);
+                    }
+                }
+                
+                loading.style.display = 'none';
+            };
+            
+            input.click();
+        });
+
+        // 初始化加载
+        loadMedia();
+
+        // 内存优化（兼容Via浏览器）
+        window.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'hidden') {
+                const mediaElements = document.querySelectorAll('video');
+                mediaElements.forEach(video => {
+                    video.pause();
+                    video.removeAttribute('src');
+                    video.load();
+                });
+            }
+        });
+    </script>
+</body>
+</html>

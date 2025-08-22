@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>手表搜索</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(135deg, #1a2980, #26d0ce);
+            padding: 10px;
+            color: #fff;
+            font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        /* 返回按钮样式 */
+        .back-button {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            text-decoration: none;
+            font-size: 1.2rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            z-index: 100;
+            transition: all 0.3s ease;
+        }
+        
+        .back-button:active {
+            transform: scale(0.95);
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 300px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(8px);
+            border-radius: 20px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            overflow: hidden;
+            padding: 20px;
+            margin-top: 20px; /* 为返回按钮留出空间 */
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: white;
+        }
+        
+        .subtitle {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.85);
+        }
+        
+        .search-box {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .search-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        label {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: #a3d5ff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .search-input {
+            display: flex;
+            height: 40px;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+        }
+        
+        .search-input i {
+            width: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.2);
+            font-size: 1.2rem;
+            color: rgba(255, 255, 255, 0.8);
+        }
+        
+        #search-query {
+            flex: 1;
+            border: none;
+            padding: 0 15px;
+            font-size: 0.9rem;
+            background: rgba(255, 255, 255, 0.15);
+            color: white;
+            outline: none;
+        }
+        
+        #search-query::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+        
+        .engine-selector {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .engine-option {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .engine-option:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .engine-option.selected {
+            background: rgba(79, 172, 254, 0.3);
+            border: 1px solid #4facfe;
+        }
+        
+        .engine-icon {
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            font-size: 1.2rem;
+        }
+        
+        .engine-name {
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        
+        .search-btn {
+            height: 45px;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #4facfe, #00f2fe);
+            color: white;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+            margin-top: 10px;
+        }
+        
+        .search-btn:active {
+            transform: scale(0.98);
+        }
+        
+        footer {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 0.7rem;
+            color: rgba(255, 255, 255, 0.6);
+            padding-top: 15px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        /* 智能手表优化 */
+        @media (max-height: 400px) {
+            .container {
+                padding: 15px;
+            }
+            
+            h1 {
+                font-size: 1.3rem;
+            }
+            
+            .search-box {
+                padding: 12px;
+            }
+            
+            .engine-option {
+                padding: 10px;
+            }
+            
+            .back-button {
+                top: 10px;
+                left: 10px;
+                width: 35px;
+                height: 35px;
+                font-size: 1rem;
+            }
+        }
+        
+        /* 动画效果 */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-5px); }
+            40%, 80% { transform: translateX(5px); }
+        }
+    </style>
+</head>
+<body>
+    <!-- 返回按钮 -->
+    <a href="index.html" class="back-button">
+        <i class="fas fa-arrow-left"></i>
+    </a>
+    
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-search"></i> 手表搜索</h1>
+            <div class="subtitle">选择引擎，输入关键词</div>
+        </header>
+        
+        <div class="search-box">
+            <form id="search-form" class="search-form">
+                <div class="form-group">
+                    <label for="search-query"><i class="fas fa-keyboard"></i> 关键词</label>
+                    <div class="search-input">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="search-query" placeholder="输入搜索内容..." autocomplete="off">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label><i class="fas fa-globe-asia"></i> 搜索引擎</label>
+                    <div class="engine-selector">
+                        <div class="engine-option selected" data-engine="baidu">
+                            <div class="engine-icon" style="background: linear-gradient(135deg, #2937f0, #1a27d8);">
+                                <i class="fa-solid fa-b"></i>
+                            </div>
+                            <div class="engine-name">百度</div>
+                        </div>
+                        
+                        <div class="engine-option" data-engine="google">
+                            <div class="engine-icon" style="background: linear-gradient(135deg, #ea4335, #c5221f);">
+                                <i class="fab fa-google"></i>
+                            </div>
+                            <div class="engine-name">谷歌</div>
+                        </div>
+                        
+                        <div class="engine-option" data-engine="bing">
+                            <div class="engine-icon" style="background: linear-gradient(135deg, #0088ff, #0066cc);">
+                                <i class="fab fa-microsoft"></i>
+                            </div>
+                            <div class="engine-name">必应</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <button type="submit" class="search-btn">
+                    <i class="fas fa-search"></i> 搜索
+                </button>
+            </form>
+        </div>
+        
+        <footer>
+            <p>© 2023 手表搜索</p>
+        </footer>
+    </div>
+    
+    <script>
+        // 搜索引擎选择
+        const engineOptions = document.querySelectorAll('.engine-option');
+        let selectedEngine = 'baidu';
+        
+        engineOptions.forEach(option => {
+            option.addEventListener('click', function() {
+                engineOptions.forEach(opt => opt.classList.remove('selected'));
+                this.classList.add('selected');
+                selectedEngine = this.getAttribute('data-engine');
+            });
+        });
+        
+        // 搜索功能
+        const searchForm = document.getElementById('search-form');
+        
+        searchForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const query = document.getElementById('search-query').value.trim();
+            
+            if (!query) {
+                // 输入框抖动效果
+                const input = document.getElementById('search-query');
+                input.style.animation = 'shake 0.5s';
+                input.focus();
+                setTimeout(() => {
+                    input.style.animation = '';
+                }, 500);
+                return;
+            }
+            
+            // 根据选择的搜索引擎构造URL
+            let searchUrl;
+            switch(selectedEngine) {
+                case 'baidu':
+                    searchUrl = `https://www.baidu.com/s?wd=${encodeURIComponent(query)}`;
+                    break;
+                case 'google':
+                    searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+                    break;
+                case 'bing':
+                    searchUrl = `https://www.bing.com/search?q=${encodeURIComponent(query)}`;
+                    break;
+                default:
+                    searchUrl = `https://www.baidu.com/s?wd=${encodeURIComponent(query)}`;
+            }
+            
+            // 打开搜索结果
+            window.open(searchUrl, '_blank');
+        });
+        
+        // 自动聚焦搜索框
+        document.getElementById('search-query').focus();
+    </script>
+</body>
+</html>
